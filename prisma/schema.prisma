@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  username String    @id @db.VarChar(100)
+  password String    @db.VarChar(100)
+  name     String    @db.VarChar(100)
+  token    String?   @db.VarChar(100)
+
+  comments Comment[]
+  likes    Like[]
+
+  @@map("users")
+}
+
+model Comment {
+  id          Int      @id @default(autoincrement())
+  text        String   @db.Text
+  postMongoId String   @db.VarChar(24)   // MongoDB ObjectId, без FK
+  authorId    String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [username])
+
+  @@map("comments")
+}
+
+model Like {
+  postMongoId String @db.VarChar(24)   // MongoDB ObjectId, без FK
+  userId      String @db.VarChar(100)
+
+  user User @relation(fields: [userId], references: [username])
+
+  @@id([postMongoId, userId])
+  @@map("likes")
+}
