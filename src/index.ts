@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { swaggerUI } from '@hono/swagger-ui'
 import { userController } from './controllers/userController'
+import { commentController } from './controllers/commentController'
+import { likeController } from './controllers/likeController'
 import { openApiSpec } from './openapi'
 import { HTTPException } from 'hono/http-exception'
 import { ZodError } from 'zod'
@@ -11,6 +13,8 @@ app.get('/docs', swaggerUI({ url: '/docs/spec' }))
 app.get('/docs/spec', (c) => c.json(openApiSpec))
 
 app.route('/', userController)
+app.route('/', commentController)
+app.route('/', likeController)
 
 app.onError(async (error, c) => {
     if (error instanceof HTTPException) {
