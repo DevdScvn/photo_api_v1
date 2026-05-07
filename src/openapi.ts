@@ -1,7 +1,7 @@
 export const openApiSpec = {
     openapi: "3.0.0",
     info: {
-        title: "User API",
+        title: "Photo API",
         version: "1.0.0",
     },
     components: {
@@ -42,6 +42,29 @@ export const openApiSpec = {
                     username: { type: "string" },
                     name: { type: "string" },
                     token: { type: "string" },
+                },
+            },
+            CreateCommentRequest: {
+                type: "object",
+                required: ["text"],
+                properties: {
+                    text: { type: "string", maxLength: 1000, example: "Great shot!" },
+                },
+            },
+            CommentResponse: {
+                type: "object",
+                properties: {
+                    id: { type: "integer" },
+                    text: { type: "string" },
+                    postMongoId: { type: "string" },
+                    authorId: { type: "string" },
+                    createdAt: { type: "string", format: "date-time" },
+                },
+            },
+            ToggleLikeResponse: {
+                type: "object",
+                properties: {
+                    liked: { type: "boolean" },
                 },
             },
         },
@@ -175,6 +198,145 @@ export const openApiSpec = {
                         },
                     },
                     "401": { description: "Unauthorized" },
+                },
+            },
+        },
+        "/api/posts/{postId}/comments": {
+            post: {
+                tags: ["Comments"],
+                summary: "Add a comment to a post",
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: "postId",
+                        in: "path",
+                        required: true,
+                        schema: { type: "string" },
+                        description: "MongoDB ObjectId of the post",
+                    },
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/CreateCommentRequest" },
+                        },
+                    },
+                },
+                responses: {
+                    "201": {
+                        description: "Comment created",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        data: { $ref: "#/components/schemas/CommentResponse" },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "401": { description: "Unauthorized" },
+                    "404": { description: "Post not found" },
+                },
+            },
+            get: {
+                tags: ["Comments"],
+                summary: "List comments for a post",
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: "postId",
+                        in: "path",
+                        required: true,
+                        schema: { type: "string" },
+                        description: "MongoDB ObjectId of the post",
+                    },
+                ],
+                responses: {
+                    "200": {
+                        description: "List of comments",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        data: {
+                                            type: "array",
+                                            items: { $ref: "#/components/schemas/CommentResponse" },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "401": { description: "Unauthorized" },
+                    "404": { description: "Post not found" },
+                },
+            },
+        },
+        "/api/comments/{commentId}": {
+            delete: {
+                tags: ["Comments"],
+                summary: "Delete a comment",
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: "commentId",
+                        in: "path",
+                        required: true,
+                        schema: { type: "integer" },
+                    },
+                ],
+                responses: {
+                    "200": {
+                        description: "Comment deleted",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: { data: { type: "boolean" } },
+                                },
+                            },
+                        },
+                    },
+                    "401": { description: "Unauthorized" },
+                    "403": { description: "Forbidden — not the author" },
+                    "404": { description: "Comment not found" },
+                },
+            },
+        },
+        "/api/posts/{postId}/likes": {
+            post: {
+                tags: ["Likes"],
+                summary: "Toggle like on a post",
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: "postId",
+                        in: "path",
+                        required: true,
+                        schema: { type: "string" },
+                        description: "MongoDB ObjectId of the post",
+                    },
+                ],
+                responses: {
+                    "200": {
+                        description: "Like toggled",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        data: { $ref: "#/components/schemas/ToggleLikeResponse" },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "401": { description: "Unauthorized" },
+                    "404": { description: "Post not found" },
                 },
             },
         },
