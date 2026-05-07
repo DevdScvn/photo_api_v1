@@ -1,6 +1,38 @@
 import mongoose from 'mongoose'
 
-const postSchema = new mongoose.Schema({
+export async function connectMongo(): Promise<void> {
+    await mongoose.connect(process.env.MONGODB_URL!)
+}
+
+export interface IPostImage {
+    url: string
+    key: string
+    mimeType?: string
+}
+
+export interface IPostExif {
+    camera?: string
+    lens?: string
+    iso?: number
+    aperture?: string
+    shutter?: string
+    takenAt?: Date
+    location?: { lat: number; lng: number }
+}
+
+export interface IPost {
+    title: string
+    description?: string
+    authorId: string
+    images: IPostImage[]
+    exif?: IPostExif
+    tags: string[]
+    likesCount: number
+    createdAt: Date
+    updatedAt: Date
+}
+
+const postSchema = new mongoose.Schema<IPost>({
     title:       { type: String, required: true, maxlength: 200 },
     description: { type: String },
     authorId:    { type: String, required: true },  // username из PostgreSQL
@@ -26,4 +58,4 @@ postSchema.index({ createdAt: -1 })   // сортировка ленты
 postSchema.index({ tags: 1 })         // фильтр по тегу
 postSchema.index({ authorId: 1 })     // посты автора
 
-export const PostModel = mongoose.model('Post', postSchema)
+export const PostModel = mongoose.model<IPost>('Post', postSchema)

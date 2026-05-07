@@ -7,9 +7,7 @@ import { CreateCommentRequest } from "../models/comment";
 
 export const commentController = new Hono<{ Variables: AppicationVariable }>();
 
-commentController.use(authMiddleware)
-
-commentController.post('/api/posts/:postId/comments', async (c) => {
+commentController.post('/api/posts/:postId/comments', authMiddleware, async (c) => {
     const user = c.get('user') as User
     const postId = c.req.param('postId')
     const request = await c.req.json() as CreateCommentRequest
@@ -27,7 +25,7 @@ commentController.get('/api/posts/:postId/comments', async (c) => {
     return c.json({ data: response })
 })
 
-commentController.delete('/api/comments/:commentId', async (c) => {
+commentController.delete('/api/comments/:commentId', authMiddleware, async (c) => {
     const user = c.get('user') as User
     const commentId = Number(c.req.param('commentId'))
 

@@ -31,11 +31,7 @@ userController.post('/api/users/login', async (c) => {
 })
 
 
-userController.use(authMiddleware)
-
-userController.get('/api/users/current', async (c) => {
-    // ambil user
-
+userController.get('/api/users/current', authMiddleware, async (c) => {
     const user = c.get('user') as User
 
     return c.json({
@@ -43,7 +39,7 @@ userController.get('/api/users/current', async (c) => {
     })
 })
 
-userController.patch('/api/users/current', async (c) => {
+userController.patch('/api/users/current', authMiddleware, async (c) => {
     const user = c.get('user') as User
     const request = await c.req.json() as UpdateUserRequest
 
@@ -55,7 +51,7 @@ userController.patch('/api/users/current', async (c) => {
 
 })
 
-userController.delete('/api/users/current', async (c) => {
+userController.delete('/api/users/current', authMiddleware, async (c) => {
     const user = c.get('user') as User
 
     const response = await UserService.logout(user)

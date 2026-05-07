@@ -6,9 +6,7 @@ import { LikeService } from "../services/likeService";
 
 export const likeController = new Hono<{ Variables: AppicationVariable }>();
 
-likeController.use(authMiddleware)
-
-likeController.post('/api/posts/:postId/likes', async (c) => {
+likeController.post('/api/posts/:postId/likes', authMiddleware, async (c) => {
     const user = c.get('user') as User
     const postId = c.req.param('postId')
 
