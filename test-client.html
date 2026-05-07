@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shots</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --border: #e8e6e1;
+  --text: #1a1a1a;
+  --muted: #999;
+  --like: #e11d48;
+  --tag-bg: #f0ede8;
+  --overlay-bg: rgba(15,15,15,.7);
+  --r: 12px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 48px;
+}
+
+/* ── Toasts ── */
+#toasts { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { padding: 11px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; color: #fff; background: #1a1a1a; animation: slide-in .2s ease; max-width: 280px; pointer-events: auto; }
+.toast.err { background: #c41c1c; }
+.toast.ok  { background: #16a34a; }
+@keyframes slide-in { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Auth ── */
+#auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #111; }
+.auth-card { background: var(--surface); border-radius: 20px; padding: 40px; width: 380px; box-shadow: 0 24px 64px rgba(0,0,0,.5); }
+.auth-logo { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 4px; }
+.auth-sub  { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+.auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+.auth-tab  { padding: 8px 0; margin-right: 20px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s; }
+.auth-tab.on { color: var(--text); border-bottom-color: var(--text); }
+
+/* ── Form ── */
+.f { margin-bottom: 14px; }
+.f label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+.f input, .f textarea {
+  width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 14px; color: var(--text); background: var(--bg); outline: none;
+  transition: border-color .15s; font-family: inherit;
+}
+.f input:focus, .f textarea:focus { border-color: var(--text); }
+.f textarea { resize: vertical; min-height: 72px; }
+.f-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: inherit;
+  transition: opacity .15s, transform .1s;
+}
+.btn:hover { opacity: .82; }
+.btn:active { transform: scale(.97); }
+.btn-dark    { background: var(--text); color: #fff; }
+.btn-outline { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+.btn-danger  { background: #fee2e2; color: #b91c1c; border: none; }
+.btn-full    { width: 100%; }
+.btn-sm      { padding: 7px 13px; font-size: 13px; }
+.btn-like    { background: transparent; color: var(--muted); border: 1.5px solid var(--border); border-radius: 99px; padding: 7px 15px; font-size: 13px; }
+.btn-like.on { color: var(--like); border-color: var(--like); background: #fff0f3; }
+
+/* ── App ── */
+#app { display: none; }
+#app.on { display: block; }
+
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(248,247,244,.88); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  height: 58px; padding: 0 28px;
+  display: flex; align-items: center; gap: 4px;
+}
+.logo { font-size: 19px; font-weight: 800; letter-spacing: -.4px; margin-right: auto; }
+.nav-btn {
+  padding: 6px 13px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  color: var(--muted); cursor: pointer; border: none; background: none;
+  font-family: inherit; transition: color .15s, background .15s;
+}
+.nav-btn:hover { color: var(--text); background: var(--border); }
+.nav-btn.on { color: var(--text); background: var(--border); }
+.nav-new {
+  margin-left: 8px; padding: 7px 16px; background: var(--text); color: #fff;
+  border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; font-family: inherit; transition: opacity .15s;
+}
+.nav-new:hover { opacity: .82; }
+.user-chip { display: flex; align-items: center; gap: 7px; margin-left: 12px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--text); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── Pages ── */
+.page { display: none; padding: 32px 28px; max-width: 1100px; margin: 0 auto; }
+.page.on { display: block; }
+
+/* ── Feed ── */
+.feed-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 26px; }
+.feed-bar input {
+  padding: 8px 13px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 13px; background: var(--surface); outline: none; color: var(--text);
+  width: 200px; font-family: inherit; transition: border-color .15s;
+}
+.feed-bar input:focus { border-color: var(--text); }
+.page-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.pg-btn { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 17px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.pg-btn:hover { background: var(--border); }
+.pg-label { font-size: 12px; color: var(--muted); padding: 0 4px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 18px; }
+.card {
+  background: var(--surface); border-radius: var(--r); overflow: hidden;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: transform .18s, box-shadow .18s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,.09); }
+.card-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: var(--bg); }
+.card-ph  { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--muted); font-size: 13px; font-style: italic; padding: 16px; text-align: center; }
+.card-body { padding: 13px 15px; }
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; line-height: 1.3; }
+.card-meta  { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.card-tags  { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 99px; background: var(--tag-bg); color: #777; font-weight: 500; }
+.empty { text-align: center; padding: 64px; color: var(--muted); }
+.empty-icon { font-size: 44px; margin-bottom: 12px; }
+
+/* ── Spinner ── */
+.spin { width: 20px; height: 20px; border: 2px solid #ddd; border-top-color: #555; border-radius: 50%; animation: rot .6s linear infinite; display: inline-block; }
+@keyframes rot { to { transform: rotate(360deg); } }
+
+/* ── Overlays ── */
+.ov { position: fixed; inset: 0; z-index: 200; background: var(--overlay-bg); display: none; align-items: center; justify-content: center; padding: 20px; }
+.ov.on { display: flex; }
+.ov-close { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border); background: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--muted); transition: background .15s; flex-shrink: 0; }
+.ov-close:hover { background: var(--bg); }
+
+/* Post detail */
+.post-ov { background: var(--surface); border-radius: 18px; overflow: hidden; max-width: 880px; width: 100%; max-height: 90vh; display: flex; box-shadow: 0 40px 100px rgba(0,0,0,.35); }
+.post-left  { width: 48%; flex-shrink: 0; background: #0d0d0d; display: flex; align-items: center; justify-content: center; }
+.post-left img { width: 100%; height: 100%; object-fit: contain; max-height: 90vh; }
+.post-right { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 24px; min-height: 0; }
+.post-ov-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.post-ov-title { font-size: 20px; font-weight: 700; line-height: 1.25; flex: 1; }
+.post-author-l { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.post-desc { font-size: 14px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+.exif-box { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 12px; }
+.exif-row { font-size: 12px; color: var(--muted); }
+.exif-row b { color: var(--text); }
+.like-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.like-count { font-size: 13px; color: var(--muted); }
+.hr { height: 1px; background: var(--border); margin: 14px 0; }
+.comments-hd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 10px; }
+.comments-list { flex: 1; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.c-item { display: flex; gap: 8px; }
+.c-av { width: 26px; height: 26px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.c-body { flex: 1; }
+.c-author { font-size: 12px; font-weight: 700; }
+.c-text   { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.c-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; transition: color .15s; }
+.c-del:hover { color: var(--like); }
+.c-form { display: flex; gap: 8px; }
+.c-form input { flex: 1; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; font-family: inherit; background: var(--bg); transition: border-color .15s; }
+.c-form input:focus { border-color: var(--text); }
+.post-ov-foot { display: flex; gap: 8px; padding-top: 14px; margin-top: auto; border-top: 1px solid var(--border); }
+
+/* Upload */
+.up-panel { background: var(--surface); border-radius: 18px; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 40px 100px rgba(0,0,0,.35); }
+.up-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.up-title { font-size: 18px; font-weight: 700; }
+.up-sub   { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: 12px; padding: 36px 24px;
+  text-align: center; cursor: pointer; transition: border-color .15s, background .15s; margin-bottom: 16px;
+}
+.drop-zone:hover, .drop-zone.drag { border-color: var(--text); background: var(--bg); }
+.drop-zone input { display: none; }
+.drop-icon { font-size: 36px; margin-bottom: 8px; }
+.drop-text { font-size: 14px; color: var(--muted); }
+.drop-hint { font-size: 11px; color: #bbb; margin-top: 4px; }
+.up-preview { width: 100%; border-radius: 8px; margin-bottom: 14px; max-height: 200px; object-fit: cover; display: block; }
+.step-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; }
+.step-label em { color: var(--text); font-style: normal; }
+
+/* Profile */
+.prof-head { display: flex; align-items: center; gap: 18px; margin-bottom: 32px; }
+.prof-av { width: 68px; height: 68px; border-radius: 50%; background: var(--text); color: #fff; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.prof-name { font-size: 22px; font-weight: 700; }
+.prof-uname { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.prof-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 22px; max-width: 420px; }
+.prof-card h2 { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+
+/* Debug */
+#dbg { position: fixed; bottom: 0; left: 0; right: 0; z-index: 300; background: #0c0c0c; border-top: 1px solid #1e1e1e; }
+.dbg-bar { width: 100%; padding: 7px 16px; background: none; border: none; cursor: pointer; color: #555; font-size: 11px; text-align: left; font-family: 'Cascadia Code', 'Consolas', monospace; display: flex; align-items: center; gap: 10px; }
+.dbg-bar:hover { color: #888; }
+#dbg-body { display: none; padding: 10px 16px; max-height: 180px; overflow-y: auto; }
+#dbg-body.on { display: block; }
+#dbg-pre { font-size: 11px; color: #4ade80; font-family: 'Cascadia Code', 'Consolas', monospace; white-space: pre-wrap; word-break: break-all; }
+
+@media (max-width: 640px) {
+  .post-ov { flex-direction: column; max-height: 95vh; }
+  .post-left { width: 100%; height: 180px; flex-shrink: 0; }
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  header { padding: 0 14px; }
+  .page { padding: 20px 14px; }
+}
+</style>
+</head>
+<body>
+
+<div id="toasts"></div>
+
+<!-- ════════════════════════════ AUTH ════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">📷 Shots</div>
+    <div class="auth-sub">A place for photographers.</div>
+    <div class="auth-tabs">
+      <div class="auth-tab on" onclick="authTab('in')">Sign in</div>
+      <div class="auth-tab"   onclick="authTab('up')">Create account</div>
+    </div>
+
+    <div id="form-in">
+      <div class="f"><label>Username</label><input id="l-u" placeholder="your_username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="f"><label>Password</label><input id="l-p" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn btn-dark btn-full" onclick="doLogin()">Sign in</button>
+    </div>
+
+    <div id="form-up" style="display:none">
+      <div class="f"><label>Username</label><input id="r-u" placeholder="your_username"></div>
+      <div class="f"><label>Password</label><input id="r-p" type="password" placeholder="••••••••"></div>
+      <div class="f"><label>Display Name</label><input id="r-n" placeholder="Jane Smith"></div>
+      <button class="btn btn-dark btn-full" onclick="doRegister()">Create account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ APP ════════════════════════════ -->
+<div id="app">
+  <header>
+    <div class="logo">📷 Shots</div>
+    <button class="nav-btn on" id="nav-feed"    onclick="goto('feed')">Feed</button>
+    <button class="nav-btn"    id="nav-profile" onclick="goto('profile')">Profile</button>
+    <button class="nav-new" onclick="openUpload()">+ Post</button>
+    <div class="user-chip">
+      <div class="avatar" id="hd-av">?</div>
+      <span style="font-size:13px;color:var(--muted)" id="hd-name"></span>
+    </div>
+  </header>
+
+  <!-- Feed -->
+  <div class="page on" id="page-feed">
+    <div class="feed-bar">
+      <input id="tag-in" placeholder="Filter by tag…" onkeydown="if(event.key==='Enter')loadFeed()">
+      <button class="btn btn-outline btn-sm" onclick="loadFeed()">Search</button>
+      <button class="btn btn-outline btn-sm" onclick="clearTag()">Clear</button>
+      <div class="page-nav">
+        <span class="pg-label" id="pg-lbl">Page 1</span>
+        <button class="pg-btn" onclick="prevPage()">‹</button>
+        <button class="pg-btn" onclick="nextPage()">›</button>
+      </div>
+    </div>
+    <div class="grid" id="grid">
+      <div class="empty"><div class="spin" style="margin:0 auto"></div></div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="page" id="page-profile">
+    <div class="prof-head">
+      <div class="prof-av" id="pr-av">?</div>
+      <div>
+        <div class="prof-name"  id="pr-name">—</div>
+        <div class="prof-uname" id="pr-uname">@—</div>
+        <button class="btn btn-outline btn-sm" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+    <div class="prof-card">
+      <h2>Edit profile</h2>
+      <div class="f"><label>Display Name</label><input id="ed-name" placeholder="Jane Smith"></div>
+      <div class="f"><label>New Password</label><input id="ed-pass" type="password" placeholder="leave blank to keep current"></div>
+      <button class="btn btn-dark" onclick="doUpdateUser()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ POST DETAIL ════════════════════════════ -->
+<div class="ov" id="ov-post" onclick="bgClose(event,'ov-post',closePost)">
+  <div class="post-ov">
+    <div class="post-left" id="post-left">
+      <span style="color:#444;font-size:13px">No image</span>
+    </div>
+    <div class="post-right" id="post-right">
+      <div class="post-ov-head">
+        <div style="flex:1">
+          <div class="post-author-l" id="pd-author"></div>
+          <div class="post-ov-title"  id="pd-title"></div>
+        </div>
+        <button class="ov-close" onclick="closePost()">✕</button>
+      </div>
+      <div class="post-desc"   id="pd-desc"></div>
+      <div class="card-tags"   id="pd-tags" style="margin-bottom:10px"></div>
+      <div class="exif-box"    id="pd-exif" style="display:none"></div>
+      <div class="like-row">
+        <button class="btn-like" id="like-btn" onclick="toggleLike()">♡ Like</button>
+        <span class="like-count" id="like-cnt">0 likes</span>
+      </div>
+      <div class="hr"></div>
+      <div class="comments-hd">Comments</div>
+      <div class="comments-list" id="cmt-list"></div>
+      <div class="c-form">
+        <input id="cmt-in" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')postComment()">
+        <button class="btn btn-dark btn-sm" onclick="postComment()">Post</button>
+      </div>
+      <div class="post-ov-foot" id="pd-foot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ UPLOAD ════════════════════════════ -->
+<div class="ov" id="ov-upload" onclick="bgClose(event,'ov-upload',closeUpload)">
+  <div class="up-panel">
+    <div class="up-head">
+      <div class="up-title">New post</div>
+      <button class="ov-close" onclick="closeUpload()">✕</button>
+    </div>
+    <div class="up-sub">Share your work with the world.</div>
+
+    <div id="up-s1">
+      <div class="step-label">Step <em>1</em> of 2 — Choose photo</div>
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-in').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <input type="file" id="file-in" accept="image/*" onchange="pickFile(event)">
+        <div class="drop-icon">🖼️</div>
+        <div class="drop-text">Click or drag a photo here</div>
+        <div class="drop-hint">JPEG · PNG · WebP · GIF · max 20 MB</div>
+      </div>
+    </div>
+
+    <div id="up-s2" style="display:none">
+      <div class="step-label">Step <em>2</em> of 2 — Details</div>
+      <img id="up-preview" class="up-preview" src="" alt="">
+      <div class="f"><label>Title *</label><input id="np-title" placeholder="Golden hour in the mountains"></div>
+      <div class="f"><label>Description</label><input id="np-desc" placeholder="Tell the story behind this shot…"></div>
+      <div class="f"><label>Tags</label><input id="np-tags" placeholder="landscape, mountains, golden-hour"></div>
+      <div class="f"><label>Camera</label><input id="np-cam" placeholder="Sony A7 IV"></div>
+      <div class="f-row">
+        <div class="f"><label>ISO</label><input id="np-iso" type="number" placeholder="400"></div>
+        <div class="f"><label>Aperture</label><input id="np-ap" placeholder="f/1.8"></div>
+        <div class="f"><label>Shutter</label><input id="np-sh" placeholder="1/500"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-outline" onclick="resetUpload()">← Back</button>
+        <button class="btn btn-dark" style="flex:1" onclick="doPublish()">Publish</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ DEBUG BAR ════════════════════════════ -->
+<div id="dbg">
+  <button class="dbg-bar" onclick="toggleDbg()">
+    <span style="color:#3b5bdb">⚡ API</span>
+    <span id="dbg-method" style="color:#60a5fa"></span>
+    <span id="dbg-path"   style="color:#888"></span>
+    <span id="dbg-status"></span>
+    <span style="margin-left:auto;color:#444">▲ debug</span>
+  </button>
+  <div id="dbg-body">
+    <pre id="dbg-pre">No requests yet.</pre>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────
+const S = {
+  token: '', user: null,
+  posts: [], page: 1,
+  cur: null,          // current open post
+  upload: null,       // { url, key } from /upload
+  liked: new Set(),
+};
+
+const BASE = '';
+
+// ─── API ──────────────────────────────────────────────────────────────
+async function api(method, path, body, isForm) {
+  const opts = { method, headers: {} };
+  if (S.token) opts.headers['Authorization'] = `Bearer ${S.token}`;
+  if (isForm)       opts.body = body;
+  else if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+
+  let res, data;
+  try {
+    res = await fetch(BASE + path, opts);
+    try { data = await res.json(); } catch { data = {}; }
+  } catch {
+    toast('Cannot reach server — is it running?', 'err');
+    throw new Error('network');
+  }
+  dbgLog(method, path, res.status, data);
+  return { ok: res.ok, status: res.status, data };
+}
+
+// ─── Debug bar ────────────────────────────────────────────────────────
+function dbgLog(m, p, s, d) {
+  document.getElementById('dbg-method').textContent = m;
+  document.getElementById('dbg-path').textContent = p;
+  const el = document.getElementById('dbg-status');
+  el.textContent = s;
+  el.style.color = s < 300 ? '#4ade80' : '#f87171';
+  document.getElementById('dbg-pre').textContent =
+    `${m} ${BASE}${p}\nHTTP ${s}\n\n${JSON.stringify(d, null, 2)}`;
+}
+function toggleDbg() { document.getElementById('dbg-body').classList.toggle('on'); }
+
+// ─── Toast ────────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const el = Object.assign(document.createElement('div'), { className: `toast ${type}`, textContent: msg });
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────
+function authTab(t) {
+  document.querySelectorAll('.auth-tab').forEach((el, i) => el.classList.toggle('on', (t === 'in') === (i === 0)));
+  document.getElementById('form-in').style.display = t === 'in' ? '' : 'none';
+  document.getElementById('form-up').style.display = t === 'up' ? '' : 'none';
+}
+
+async function doLogin() {
+  const r = await api('POST', '/api/users/login', { username: v('l-u'), password: v('l-p') });
+  if (!r.ok) { toast(r.data?.errors || 'Invalid credentials', 'err'); return; }
+  enterApp(r.data.data);
+}
+
+async function doRegister() {
+  const r = await api('POST', '/api/users', { username: v('r-u'), password: v('r-p'), name: v('r-n') });
+  if (!r.ok) { toast(r.data?.errors || 'Registration failed', 'err'); return; }
+  enterApp(r.data.data);
+}
+
+function enterApp(user) {
+  S.token = user.token; S.user = user;
+  hide('auth-screen');
+  document.getElementById('app').classList.add('on');
+  setUserUI(user);
+  goto('feed');
+  loadFeed();
+}
+
+function setUserUI(u) {
+  if (!u) return;
+  const ini = (u.name || u.username || '?').slice(0, 2).toUpperCase();
+  setText('hd-av',   ini);
+  setText('hd-name', u.name || u.username);
+  setText('pr-av',   ini);
+  setText('pr-name', u.name || '—');
+  setText('pr-uname','@' + (u.username || '—'));
+  const el = document.getElementById('ed-name');
+  if (el) el.value = u.name || '';
+}
+
+async function doLogout() {
+  await api('DELETE', '/api/users/current');
+  S.token = ''; S.user = null;
+  document.getElementById('app').classList.remove('on');
+  show('auth-screen');
+  toast('Signed out');
+}
+
+async function doUpdateUser() {
+  const body = {};
+  const n = v('ed-name'); const p = v('ed-pass');
+  if (n) body.name = n;
+  if (p) body.password = p;
+  const r = await api('PATCH', '/api/users/current', body);
+  if (!r.ok) { toast(r.data?.errors || 'Update failed', 'err'); return; }
+  S.user = r.data.data; setUserUI(S.user);
+  document.getElementById('ed-pass').value = '';
+  toast('Profile saved ✓');
+}
+
+// ─── Pages ────────────────────────────────────────────────────────────
+function goto(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('page-' + id).classList.add('on');
+  const nb = document.getElementById('nav-' + id);
+  if (nb) nb.classList.add('on');
+  if (id === 'profile') loadProfile();
+}
+
+async function loadProfile() {
+  const r = await api('GET', '/api/users/current');
+  if (r.ok) { S.user = r.data.data; setUserUI(S.user); }
+}
+
+// ─── Feed ─────────────────────────────────────────────────────────────
+async function loadFeed() {
+  const tag = v('tag-in');
+  let qs = `?page=${S.page}`;
+  if (tag) qs += `&tag=${encodeURIComponent(tag)}`;
+  document.getElementById('grid').innerHTML = '<div class="empty"><div class="spin" style="margin:0 auto 8px"></div><div>Loading…</div></div>';
+  const r = await api('GET', '/api/posts' + qs);
+  if (!r.ok) { toast('Failed to load feed', 'err'); return; }
+  S.posts = r.data.data || [];
+  renderGrid();
+  setText('pg-lbl', `Page ${S.page}`);
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  if (!S.posts.length) {
+    grid.innerHTML = '<div class="empty"><div class="empty-icon">🌅</div><div>No posts yet. Be the first!</div></div>';
+    return;
+  }
+  grid.innerHTML = S.posts.map(p => {
+    const url = p.images?.[0]?.url;
+    const imgHtml = url
+      ? `<img class="card-img" src="${x(url)}" alt="${x(p.title)}" loading="lazy"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        + `<div class="card-ph" style="display:none">${x(p.title)}</div>`
+      : `<div class="card-ph">${x(p.title)}</div>`;
+    const tags = (p.tags || []).slice(0, 3).map(t => `<span class="tag">${x(t)}</span>`).join('');
+    return `<div class="card" onclick="openPost('${p.id}')">
+      ${imgHtml}
+      <div class="card-body">
+        <div class="card-title">${x(p.title)}</div>
+        <div class="card-meta"><span>@${x(p.authorId)}</span><span>♡ ${p.likesCount || 0}</span></div>
+        ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearTag() { document.getElementById('tag-in').value = ''; S.page = 1; loadFeed(); }
+function nextPage()  { S.page++; loadFeed(); }
+function prevPage()  { if (S.page > 1) { S.page--; loadFeed(); } }
+
+// ─── Post detail ─────────────────────────────────────────────────────
+async function openPost(id) {
+  const r = await api('GET', `/api/posts/${id}`);
+  if (!r.ok) { toast('Post not found', 'err'); return; }
+  S.cur = r.data.data;
+  renderPost();
+  loadComments(id);
+  document.getElementById('ov-post').classList.add('on');
+}
+
+function renderPost() {
+  const p = S.cur;
+  const url = p.images?.[0]?.url;
+  document.getElementById('post-left').innerHTML = url
+    ? `<img src="${x(url)}" style="width:100%;height:100%;object-fit:contain;max-height:90vh" alt="${x(p.title)}">`
+    : `<span style="color:#444;font-size:13px">No image</span>`;
+
+  setText('pd-author', '@' + p.authorId);
+  setText('pd-title',  p.title);
+
+  const desc = document.getElementById('pd-desc');
+  desc.textContent = p.description || ''; desc.style.display = p.description ? '' : 'none';
+
+  document.getElementById('pd-tags').innerHTML = (p.tags || []).map(t => `<span class="tag">${x(t)}</span>`).join('');
+
+  const exifEl = document.getElementById('pd-exif');
+  if (p.exif && Object.keys(p.exif).length) {
+    const e = p.exif;
+    exifEl.innerHTML = [
+      e.camera   && `<div class="exif-row"><b>📷</b> ${x(e.camera)}</div>`,
+      e.lens     && `<div class="exif-row"><b>🔭</b> ${x(e.lens)}</div>`,
+      e.iso      && `<div class="exif-row"><b>ISO</b> ${e.iso}</div>`,
+      e.aperture && `<div class="exif-row"><b>⏺</b> ${x(e.aperture)}</div>`,
+      e.shutter  && `<div class="exif-row"><b>⚡</b> ${x(e.shutter)}</div>`,
+    ].filter(Boolean).join('');
+    exifEl.style.display = '';
+  } else { exifEl.style.display = 'none'; }
+
+  const liked = S.liked.has(p.id);
+  const lb = document.getElementById('like-btn');
+  lb.textContent = liked ? '♥ Liked' : '♡ Like';
+  lb.className = 'btn-like' + (liked ? ' on' : '');
+  setText('like-cnt', `${p.likesCount || 0} likes`);
+
+  const foot = document.getElementById('pd-foot');
+  if (S.user && p.authorId === S.user.username) {
+    foot.innerHTML = `
+      <button class="btn btn-outline btn-sm" onclick="editPostPrompt()">Edit</button>
+      <button class="btn btn-danger btn-sm"  onclick="doDeletePost()">Delete</button>`;
+    foot.style.display = '';
+  } else { foot.innerHTML = ''; foot.style.display = 'none'; }
+}
+
+async function toggleLike() {
+  const r = await api('POST', `/api/posts/${S.cur.id}/likes`);
+  if (!r.ok) { toast(r.data?.errors || 'Error', 'err'); return; }
+  const { liked } = r.data.data;
+  if (liked) S.liked.add(S.cur.id); else S.liked.delete(S.cur.id);
+  S.cur.likesCount = (S.cur.likesCount || 0) + (liked ? 1 : -1);
+  const lb = document.getElementById('like-btn');
+  lb.textContent = liked ? '♥ Liked' : '♡ Like';
+  lb.className = 'btn-like' + (liked ? ' on' : '');
+  setText('like-cnt', `${S.cur.likesCount} likes`);
+  renderGrid();
+}
+
+async function loadComments(postId) {
+  const r = await api('GET', `/api/posts/${postId}/comments`);
+  if (!r.ok) return;
+  const list = document.getElementById('cmt-list');
+  const cmts = r.data.data || [];
+  if (!cmts.length) { list.innerHTML = '<div style="font-size:13px;color:#bbb">No comments yet.</div>'; return; }
+  list.innerHTML = cmts.map(c => {
+    const own = S.user && c.authorId === S.user.username;
+    return `<div class="c-item" id="c-${c.id}">
+      <div class="c-av">${(c.authorId||'?').slice(0,2).toUpperCase()}</div>
+      <div class="c-body">
+        <div class="c-author">@${x(c.authorId)}</div>
+        <div class="c-text">${x(c.text)}</div>
+      </div>
+      ${own ? `<button class="c-del" onclick="delComment(${c.id})" title="Delete">✕</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function postComment() {
+  const el = document.getElementById('cmt-in');
+  const text = el.value.trim(); if (!text) return;
+  const r = await api('POST', `/api/posts/${S.cur.id}/comments`, { text });
+  if (!r.ok) { toast(r.data?.errors || 'Error', 'err'); return; }
+  el.value = '';
+  loadComments(S.cur.id);
+}
+
+async function delComment(id) {
+  const r = await api('DELETE', `/api/comments/${id}`);
+  if (!r.ok) { toast(r.data?.errors || 'Error', 'err'); return; }
+  document.getElementById(`c-${id}`)?.remove();
+  toast('Comment removed');
+}
+
+function editPostPrompt() {
+  const p = S.cur;
+  const title = prompt('Title:', p.title); if (title === null) return;
+  const desc  = prompt('Description:', p.description || ''); if (desc === null) return;
+  const tags  = prompt('Tags (comma-separated):', (p.tags || []).join(', ')); if (tags === null) return;
+  doEditPost(title, desc, tags);
+}
+async function doEditPost(title, desc, tagsStr) {
+  const body = { title };
+  if (desc) body.description = desc;
+  if (tagsStr) body.tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+  const r = await api('PATCH', `/api/posts/${S.cur.id}`, body);
+  if (!r.ok) { toast(r.data?.errors || 'Update failed', 'err'); return; }
+  S.cur = r.data.data; renderPost(); renderGrid(); toast('Post updated ✓');
+}
+
+async function doDeletePost() {
+  if (!confirm('Delete this post?')) return;
+  const r = await api('DELETE', `/api/posts/${S.cur.id}`);
+  if (!r.ok) { toast(r.data?.errors || 'Error', 'err'); return; }
+  closePost(); loadFeed(); toast('Post deleted');
+}
+
+function closePost() { document.getElementById('ov-post').classList.remove('on'); S.cur = null; }
+
+// ─── Upload ───────────────────────────────────────────────────────────
+function openUpload()  { resetUpload(); document.getElementById('ov-upload').classList.add('on'); }
+function closeUpload() { document.getElementById('ov-upload').classList.remove('on'); }
+function resetUpload() {
+  S.upload = null;
+  show('up-s1'); hide('up-s2');
+  document.getElementById('file-in').value = '';
+}
+
+function handleDrop(e) { e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag'); processFile(e.dataTransfer.files[0]); }
+function pickFile(e)   { processFile(e.target.files[0]); }
+
+async function processFile(file) {
+  if (!file) return;
+  const localUrl = URL.createObjectURL(file);
+  const form = new FormData(); form.append('file', file);
+  const r = await api('POST', '/api/upload', form, true);
+  if (!r.ok) { toast(r.data?.errors || 'Upload failed', 'err'); return; }
+  S.upload = r.data.data;
+  document.getElementById('up-preview').src = localUrl;
+  hide('up-s1'); show('up-s2');
+  toast('Photo uploaded ✓');
+}
+
+async function doPublish() {
+  const title = v('np-title'); if (!title) { toast('Title is required', 'err'); return; }
+  if (!S.upload) { toast('Upload a photo first', 'err'); return; }
+  const body = { title, images: [S.upload] };
+  const desc = v('np-desc'); if (desc) body.description = desc;
+  const tagsRaw = v('np-tags'); if (tagsRaw) body.tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+  const cam = v('np-cam'), iso = v('np-iso'), ap = v('np-ap'), sh = v('np-sh');
+  if (cam || iso || ap || sh) {
+    body.exif = {};
+    if (cam) body.exif.camera = cam;
+    if (iso) body.exif.iso = parseInt(iso);
+    if (ap)  body.exif.aperture = ap;
+    if (sh)  body.exif.shutter = sh;
+  }
+  const r = await api('POST', '/api/posts', body);
+  if (!r.ok) { toast(r.data?.errors || 'Publish failed', 'err'); return; }
+  closeUpload(); S.page = 1; loadFeed(); toast('Post published! 🎉');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+function setText(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
+function show(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
+function hide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+function bgClose(e, ov, fn) { if (e.target === document.getElementById(ov)) fn(); }
+function x(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
