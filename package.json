@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
+    "dev": "bun --hot src/index.ts",
     "build": "tsc --noEmit"
   },
   "dependencies": {
