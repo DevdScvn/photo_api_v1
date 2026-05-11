@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import { LoginUserRequest, RegisterUserRequest, toUserResponse, UpdateUserRequest } from "../models/user";
 import { UserService } from "../services/userService";
 import { User } from "@prisma/client";
-import { AppicationVariable } from "../models/app";
+import { ApplicationVariable } from "../models/app";
 import { authMiddleware } from "../middleware/authMiddleware";
 
-export const userController = new Hono<{ Variables: AppicationVariable }>();
+export const userController = new Hono<{ Variables: ApplicationVariable }>();
 
 userController.post('/api/users', async (c) => {
     const request = await c.req.json() as RegisterUserRequest

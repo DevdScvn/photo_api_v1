@@ -1,11 +1,11 @@
 import { Hono } from "hono"
 import { User } from "@prisma/client"
-import { AppicationVariable } from "../models/app"
+import { ApplicationVariable } from "../models/app"
 import { authMiddleware } from "../middleware/authMiddleware"
 import { PostService } from "../services/postService"
 import { CreatePostRequest, UpdatePostRequest } from "../models/post"
 
-export const postController = new Hono<{ Variables: AppicationVariable }>()
+export const postController = new Hono<{ Variables: ApplicationVariable }>()
 
 postController.get('/api/posts', async (c) => {
     const tag  = c.req.query('tag')

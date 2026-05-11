@@ -1,5 +1,5 @@
 import { User } from "@prisma/client"
 
-export type AppicationVariable = {
+export type ApplicationVariable = {
     user: User
 }

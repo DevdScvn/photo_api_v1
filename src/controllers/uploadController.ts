@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { HTTPException } from "hono/http-exception"
 import { PutObjectCommand } from "@aws-sdk/client-s3"
 import { User } from "@prisma/client"
-import { AppicationVariable } from "../models/app"
+import { ApplicationVariable } from "../models/app"
 import { authMiddleware } from "../middleware/authMiddleware"
 import { s3 } from "../application/minioClient"
 
@@ -12,7 +12,7 @@ const ENDPOINT  = process.env.MINIO_ENDPOINT!
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"])
 const MAX_BYTES    = 20 * 1024 * 1024  // 20 MB
 
-export const uploadController = new Hono<{ Variables: AppicationVariable }>()
+export const uploadController = new Hono<{ Variables: ApplicationVariable }>()
 
 uploadController.post('/api/upload', authMiddleware, async (c) => {
     c.get('user') as User  // гарантируем аутентификацию

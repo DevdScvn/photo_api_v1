@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { User } from "@prisma/client";
-import { AppicationVariable } from "../models/app";
+import { ApplicationVariable } from "../models/app";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { CommentService } from "../services/commentService";
 import { CreateCommentRequest } from "../models/comment";
 
-export const commentController = new Hono<{ Variables: AppicationVariable }>();
+export const commentController = new Hono<{ Variables: ApplicationVariable }>();
 
 commentController.post('/api/posts/:postId/comments', authMiddleware, async (c) => {
     const user = c.get('user') as User
